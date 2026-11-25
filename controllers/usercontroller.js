@@ -240,3 +240,77 @@ exports.verifyEmail = async (req, res) => {
         })
     }
 }
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await userModel.findOne({ email: email.toLowerCase() })
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found'
+            })
+        }
+
+        const otp = otp_generator.generate(6, {upperCaseAlphabets: false, lowerCaseAlphabets: false, specialChars: false});
+
+        const emailContent = {
+            subject: 'Password Reset',
+            email: h,
+            name: newUser.fullName,
+            htmlContent: `<html><head></head><body><p>Hello ${newUser.fullName},</p> Your password reset was initialized, below is your OTP. 
+            if you did not initiate this request, please disregard this email <br>$ {otp} </p> 453</body></html>`
+        }
+
+        user.otp = otp;
+        await sendEmail(emailContent)
+        await user.save()
+
+        res.status(200).json({
+           message: 'Forgot Password is successful',
+        })
+
+    }catch (error) {
+        res.status(500).json({
+            message: error.message
+        })
+    }
+}
+
+exports.resetPassword = async (req, res) => {
+    try{
+        const {email, otp, newPaassword, confirmPasswoed} =req.body;
+        const user =await userModel.findOne({email: email.toLowerCase()});
+        if (user == null) {
+            res.status(404).json({
+              message: 'user not found'
+            })
+        }
+
+        if(user.otp !== otp){
+            res.status(401).json({
+              message: "Invalid OTP"
+            })
+        }
+
+        if (newPaassword !== confirmPassword) {
+            res.status(500).json({
+              message: "Confirm password does not match"
+            })
+        }
+
+        const saltedRounds = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(newPaassword, saltedRounds)
+        user.password = hashedPassword
+        user.otp = null
+
+        await user.save()
+
+        res.status(200).json({
+            message: "Password Reset Successfully"
+        })
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        })
+    }
+}
