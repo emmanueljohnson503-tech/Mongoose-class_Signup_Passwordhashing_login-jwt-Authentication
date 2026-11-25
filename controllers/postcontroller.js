@@ -4,7 +4,6 @@ const userModel = require('../Models/user');
 const fs = require ('fs');
 
 
-
 exports.createPost = async (req, res) => {
     try {
         const { userId } = req.params;
